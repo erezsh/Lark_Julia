@@ -1,0 +1,10 @@
+name = "Lark"
+uuid = "d38f95b0-bddf-11e9-2f4c-594bc4765394"
+authors = ["Erez Shinan <erezshin@gmail.com>"]
+version = "0.1.0"
+
+[extras]
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+
+[targets]
+test = ["JSON"]
