@@ -21,15 +21,12 @@ $ python -m lark.tools.serialize my_grammar.lark -o my_grammar.json
 3. Import the Lark module in Julia and use the parser
 ```julia
 import Lark
-g = open("my_grammar.json") do file
-    JSON.parse(read(file, String))
-end
-lark = load_json(g)
+lark = Lark.load_json_file("my_grammar.json")
 callback = Dict(
 	"rule1" => some_function1,
 	"rule2" => some_function2
     )
-tree = lalr_parse(lark, "some string of input", "start", callbacks)
+tree = Lark.lalr_parse(lark, "some string of input", "start", callbacks)
 ```
 
 
