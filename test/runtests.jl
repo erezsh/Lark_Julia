@@ -39,46 +39,23 @@ function test_json()
     )
 
     # res = lalr_parse(lark, "{\"a\":[1,2, 3.4, false, true, null]}", "start", callbacks)
-    g = open("json.json") do file
-        JSON.parse(read(file, String))
-    end
-    s = open("test.json") do file
-        read(file, String)
-    end
-    print("Start")
+    @time lark = load_lark_json_file("json.json")
+    @time res = lalr_parse_file(lark, "test.json", callbacks)
 
-    @time lark = load_json(g)
-    @time res = lalr_parse(lark, s, "start", callbacks)
     # print(pretty(res))
 end
 
-
-
-# test_lexer()
-# test_parser()
-# test_json()
-
 function test_python()
-    callbacks = Dict()
-
-    g = open("python3.json") do file
-        JSON.parse(read(file, String))
-    end
-    s = open("calc.py") do file
-        read(file, String)
-    end
-
     indent_conf = IndentConf(
         "_INDENT",
         "_DEDENT",
+        "_NEWLINE",
         ["LPAR", "LSQB", "LBRACE"],
         ["RPAR", "RSQB", "RBRACE"],
-        "_NEWLINE",
     )
 
-    @time lark = load_json(g)
-    @time res = lalr_parse(lark, s, "file_input", callbacks, indent_conf)
-    @time res = lalr_parse(lark, s, "file_input", callbacks, indent_conf)
+    @time lark = load_lark_json_file("python3.json")
+    @time res = lalr_parse_file(lark, "calc.py", postlex=tokens->indenter(tokens, indent_conf))
     # show(res)
 end
 

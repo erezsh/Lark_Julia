@@ -1,6 +1,8 @@
 module Lark
 
-export Tree, pretty, lalr_parse, load_json, IndentConf
+import JSON
+
+export Tree, pretty, lalr_parse, lalr_parse_file, load_lark_json, load_lark_json_file, IndentConf, indenter
 
 # Utils
 
@@ -249,9 +251,9 @@ lex(lexer, stream) = lex(lexer, stream, lexer.newline_types, lexer.ignore_types)
 struct IndentConf
     indent_type::String
     dedent_type::String
+    newline_type::String
     open_parens_types::Array{String}
     close_parens_types::Array{String}
-    newline_type::String
     tab_len::Int
 end
 IndentConf(i,d,o,c,n) = IndentConf(i,d,o,c,n,8)
@@ -591,15 +593,6 @@ struct LarkConf
     options::Dict
 end
 
-function lalr_parse(lark::LarkConf, text::String, start::String, callbacks, indent_conf::Maybe{IndentConf}=nothing) #::Dict{String,Function})
-    callback = create_callback(lark.rules, callbacks)
-    tokens = lex(lark.parser.lexer, text)
-    if indent_conf !== nothing
-        tokens = indenter(tokens, indent_conf)
-    end
-    _lalr_parse(lark.parser, tokens, start, callback)
-end
-
 
 ActionTable = Dict{TokenType, Action}
 
@@ -608,7 +601,14 @@ load_memo(memo_json) = Dict{Int, Any}(
         for (key, obj_json) in memo_json
     )
 
-function load_json(g) 
+
+function load_lark_json_file(json_file::String) :: LarkConf
+    open(json_file) do file
+        load_lark_json( JSON.parse(read(file, String)) )
+    end
+end
+
+function load_lark_json(g::Dict) :: LarkConf
     data_json = (g["data"])
     memo_json = (g["memo"])
 
@@ -618,7 +618,7 @@ function load_json(g)
     function load_obj2(obj)
         t = obj["__type__"]
         if t == "Lark"
-            return LarkConf(load_obj2(obj["parser"]), map(x->memo[x["@"]], obj["rules"]), Dict()) # obj["options"])
+            return LarkConf(load_obj2(obj["parser"]), map(x->memo[x["@"]], obj["rules"]), obj["options"])
         elseif t == "LALR_ContextualLexer"
             # parse_table = load_parse_table(obj.parser)
             # return LALR_ContextualLexer(load_obj2(obj.lexer_conf), parse_table, obj.start)
@@ -665,6 +665,34 @@ function load_json(g)
     end
 
     load_obj2(data_json)
+end
+
+
+# =====================
+#       Interface
+# =====================
+
+
+function lalr_parse(lark::LarkConf, text::Union{AbstractString,IOStream}, callbacks::Dict=Dict(); start::Maybe{String}=nothing, postlex=nothing)
+    if start === nothing
+        @assert length(lark.options["start"]) == 1
+        start = lark.options["start"][1]
+    end
+    if isa(text, IOStream)
+        text = read(text, String)
+    end
+    callback = create_callback(lark.rules, callbacks)
+    tokens = lex(lark.parser.lexer, text)
+    if postlex !== nothing
+        tokens = postlex(tokens)
+    end
+    _lalr_parse(lark.parser, tokens, start, callback)
+end
+
+function lalr_parse_file(lark::LarkConf, input_file::AbstractString, callbacks::Dict=Dict(); start::Maybe{String}=nothing, postlex=nothing)
+    open(input_file) do file
+        lalr_parse(lark, file, callbacks, start=start, postlex=postlex)
+    end
 end
 
 end # module
