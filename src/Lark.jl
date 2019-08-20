@@ -496,8 +496,8 @@ function _child_filter(to_include)
 end
 
 
-function maybe_create_child_filter(expansion)
-    to_include = [(i, _should_expand(sym)) for (i, sym) in enumerate(expansion) if _to_include(sym)]
+function maybe_create_child_filter(expansion, keep_all_tokens::Bool)
+    to_include = [(i, _should_expand(sym)) for (i, sym) in enumerate(expansion) if keep_all_tokens || _to_include(sym)]
 
     if length(to_include) < length(expansion) || any(to_expand for (i,to_expand) in to_include)
         return _child_filter(to_include)
@@ -520,7 +520,7 @@ function _create_tree_builder(rule:: Rule, options::TreeBuilderOptions) :: Array
         push!(wrapper_chain, _expand_single_child_wrapper)
     end
 
-    maybe_child_filter = maybe_create_child_filter(rule.expansion)
+    maybe_child_filter = maybe_create_child_filter(rule.expansion, keep_all_tokens)
     if maybe_child_filter !== nothing
         push!(wrapper_chain, maybe_child_filter)
     end
@@ -542,6 +542,9 @@ function create_callback(rules, user_callback)
             f = (tail::Array -> user_f(tail...))
         elseif haskey(user_callback, n2)
             f = user_callback[n2]
+        elseif haskey(user_callback, "default[]") && !startswith(user_callback_name, "_")
+            user_f = user_callback["default[]"]
+            f = (tail::Array -> user_f(user_callback_name, tail))
         else
             f = (tail::Array) -> options.tree_class(user_callback_name, tail)
         end
@@ -675,8 +678,11 @@ end
 
 function lalr_parse(lark::LarkConf, text::Union{AbstractString,IOStream}, callbacks::Dict=Dict(); start::Maybe{String}=nothing, postlex=nothing)
     if start === nothing
-        @assert length(lark.options["start"]) == 1
-        start = lark.options["start"][1]
+        start_opts = lark.options["start"]
+        if length(start_opts) > 1
+            throw("More than one possible start option! You must specify which one to use ($(join(start_opts, " | ")))")
+        end
+        start = start_opts[1]
     end
     if isa(text, IOStream)
         text = read(text, String)
