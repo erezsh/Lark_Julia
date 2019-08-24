@@ -1,8 +1,17 @@
 # Lark
 
-LALR parser implementation for Julia, based on Python's Lark
+LALR parser implementation for Julia, based on the popular [Lark for Python](https://github.com/lark-parser/lark/)
 
 It's currently working and useable, but still work in progress. Especially in terms of usability and performance
+
+Features:
+
+- LALR(1) parser (runs in O(n) time)
+- EBNF Grammar
+- Can build a parse-tree automatically, no construction code required
+- Automatic line & column tracking
+- Automatic terminal collision resolution (doesn't work for regexps colliding with other regexps)
+- Standard library of terminals (strings, numbers, names, etc.)
 
 
 ### How to use
@@ -28,5 +37,4 @@ callback = Dict(
     )
 tree = Lark.lalr_parse(lark, "some string of input", "start", callbacks)
 ```
-
 
